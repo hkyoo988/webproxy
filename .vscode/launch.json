@@ -27,7 +27,30 @@
                     "ignoreFailures": true
                 }
             ]
-        },
+        },{
+            "name": "(gdb) 시작1",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/hkyoo988/private_expedition/webproxy/proxy",
+            "args": ["5000"],
+            "stopAtEntry": false,
+            "cwd": "${fileDirname}",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "gdb에 자동 서식 지정 사용",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description": "디스어셈블리 버전을 Intel(으)로 설정",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        }
 
     ]
 }
