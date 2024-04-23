@@ -99,6 +99,11 @@ void doit(int fd)
   while ((n = Rio_readnb(&rio_server, buf, MAXLINE)) > 0)
   {
     // 목적지 서버로부터 받은 응답을 클라이언트에게 전송
+    char *content_length = strstr(buf, "Content-length:");
+        if (content_length != NULL) {
+            int size = atoi(content_length + strlen("Content-length:"));
+            printf("Resource size: %d bytes\n", size);
+        }
     Rio_writen(fd, buf, n);
   }
   Close(clientfd);

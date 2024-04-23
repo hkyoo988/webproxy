@@ -13,39 +13,36 @@ void read_requesthdrs(rio_t *rp);
 int parse_uri(char *uri, char *filename, char *cgiargs);
 void serve_static(int fd, char *filename, int filesize, char *method);
 void get_filetype(char *filename, char *filetype);
-void serve_dynamic(int fd, char *filename, char *cgiargs, char *method);
+void serve_dynamic(int fd, char *filename, char *cgiargs, char* method);
 void clienterror(int fd, char *cause, char *errnum, char *shortmsg,
                  char *longmsg);
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
   int listenfd, connfd;
   char hostname[MAXLINE], port[MAXLINE];
   socklen_t clientlen;
   struct sockaddr_storage clientaddr;
 
   /* Check command line args */
-  if (argc != 2)
-  {
+  if (argc != 2) {
     fprintf(stderr, "usage: %s <port>\n", argv[0]);
     printf("Done1 !");
     exit(1);
   }
 
   listenfd = Open_listenfd(argv[1]);
-  while (1)
-  { // 서버가 연결을 닫을 때까지 열려 있음.
+  while (1) { // 서버가 연결을 닫을 때까지 열려 있음.
     clientlen = sizeof(clientaddr);
-    connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen); // line:netp:tiny:accept
+    connfd = Accept(listenfd, (SA *)&clientaddr, &clientlen);  // line:netp:tiny:accept
     Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE, 0);
     printf("Accepted connection from (%s, %s)\n", hostname, port);
-    doit(connfd);  // line:netp:tiny:doit
-    Close(connfd); // line:netp:tiny:close
+    doit(connfd);   // line:netp:tiny:doit
+    Close(connfd);  // line:netp:tiny:close
   }
 }
 
-void doit(int fd)
-{
+
+void doit(int fd){
   int is_static;
   struct stat sbuf;
   char buf[MAXLINE], method[MAXLINE], uri[MAXLINE], version[MAXLINE]; // method: GET, uri: 경로, version: HTTP 1.1
@@ -53,13 +50,12 @@ void doit(int fd)
   rio_t rio;
 
   /* Read request line and header */
-  Rio_readinitb(&rio, fd);           // fd를  rio_t 타입의 rio 버퍼와 연결
-  Rio_readnb(&rio, buf, MAXLINE); // buf에 rio 다음 텍스트 줄을 복사
+  Rio_readinitb(&rio, fd); // fd를  rio_t 타입의 rio 버퍼와 연결
+  Rio_readlineb(&rio, buf, MAXLINE); // buf에 rio 다음 텍스트 줄을 복사
   printf("Request headers:\n");
   sscanf(buf, "%s %s %s", method, uri, version); // buf의 내용을 각 char 배열에 매핑
-  printf("%s", buf);
-  if (!(strcasecmp(method, "GET") == 0 || strcasecmp(method, "HEAD") == 0))
-  { // GET요청 아니면 에러 발생
+
+  if(!(strcasecmp(method, "GET") == 0 || strcasecmp(method,"HEAD") == 0)) { // GET요청 아니면 에러 발생
     clienterror(fd, method, "501", "Not implemented", "Tiny couldn't find this file");
     return;
   }
@@ -67,27 +63,21 @@ void doit(int fd)
 
   /* Parse URI from GET request */
   is_static = parse_uri(uri, filename, cgiargs); // uri에서 filename 파싱해 옴
-  if (stat(filename, &sbuf) < 0)
-  { // stat 함수는 주어진 파일의 메타데이터를 가져오는 함수. 파일이 존재하지 않거나 액세스할 수 없으면 호출 실패로 -1을 반환
-    clienterror(fd, filename, "404", "Not found", "Tiny couldn't find the file");
+  if (stat(filename, &sbuf) < 0) { // stat 함수는 주어진 파일의 메타데이터를 가져오는 함수. 파일이 존재하지 않거나 액세스할 수 없으면 호출 실패로 -1을 반환
+    clienterror(fd, filename, "404","Not found", "Tiny couldn't find the file");
     printf("DONE2 !!!!!!!!!");
     return;
-  }
-  if (is_static)
-  { // 정적 파일 요청
-    if (!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode))
-    { // 파일 및 권한 검사
+  } 
+  if(is_static) { // 정적 파일 요청
+    if(!(S_ISREG(sbuf.st_mode)) || !(S_IRUSR & sbuf.st_mode)) { // 파일 및 권한 검사
       clienterror(fd, filename, "403", "Forbidden", "Tiny couldn't read the file");
       printf("DONE3 !!!!!!!!!");
       return;
     }
     serve_static(fd, filename, sbuf.st_size, method);
-    printf("DONE4 !!!!!", buf);
   }
-  else
-  {
-    if (!(S_ISREG(sbuf.st_mode)) || !(S_IXUSR & sbuf.st_mode))
-    { // 파일 및 권한 검사
+  else {
+    if(!(S_ISREG(sbuf.st_mode)) ||!(S_IXUSR & sbuf.st_mode)) { // 파일 및 권한 검사
       clienterror(fd, filename, "403", "Forbidden", "Tiny couldn't run the CGI program");
       return;
     }
@@ -95,16 +85,12 @@ void doit(int fd)
   }
 }
 
-void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg)
-{
+void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longmsg){
   char buf[MAXLINE], body[MAXBUF];
-
+  
   /* Build the HTTP response body */
   sprintf(body, "<html><title>Tiny Error</title>");
-  sprintf(body, "%s<body bgcolor="
-                "ffffff"
-                ">\r\n",
-          body);
+  sprintf(body, "%s<body bgcolor=""ffffff"">\r\n", body);
   sprintf(body, "%s%s: %s\r\n", body, errnum, shortmsg);
   sprintf(body, "%s<p>%s: %s\r\n", body, longmsg, cause);
   sprintf(body, "%s<hr><em>The Tiny Web server</em>\r\n", body);
@@ -119,56 +105,49 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
   Rio_writen(fd, body, strlen(buf));
 }
 
-void read_requesthdrs(rio_t *rp)
-{
+void read_requesthdrs(rio_t *rp){
   char buf[MAXLINE];
 
   Rio_readlineb(rp, buf, MAXLINE);
-  while (strcmp(buf, "\r\n"))
-  {
+  while(strcmp(buf, "\r\n")){
     Rio_readlineb(rp, buf, MAXLINE);
     printf("%s", buf);
   }
   return;
 }
 
-int parse_uri(char *uri, char *filename, char *cgiargs)
-{
+int parse_uri(char *uri, char *filename, char *cgiargs){
   char *ptr;
-  // strstr: (대상문자열, 검색할문자열) -> 검색된 문자열(대상 문자열) 뒤에 모든 문자열이 나오게 됨
-  // uri에서 "cgi-bin"이라는 문자열이 없으면, static content
-  if (!strstr(uri, "cgi-bin"))
-  {                                  // Static content
-    strcpy(cgiargs, "");             // cgiargs 인자 string을 지운다.
-    strcpy(filename, ".");           // 상대 리눅스 경로이름으로 변환 ex) '.'
-    strcat(filename, uri);           // 상대 리눅스 경로이름으로 변환 ex) '.' + '/index.html'
-    if (uri[strlen(uri) - 1] == '/') // URI가 '/'문자로 끝난다면
-      strcat(filename, "home.html"); // 기본 파일 이름인 home.html을 추가한다. -> 11.10과제 adder.html로 변경
-    return 1;
-  }
-  else
-  { // Dynamic content (cgi-bin이라는 문자열 존재)
-    // 모든 CGI 인자들을 추출한다.
-    // index: 첫 번째 인자에서 두번째 인자를 찾는다. 찾으면 문자의 위치 포인터를, 못찾으면 NULL을 반환
-    ptr = index(uri, '?');
-    if (ptr)
-    {
-      strcpy(cgiargs, ptr + 1);
-      *ptr = '\0';
+    // strstr: (대상문자열, 검색할문자열) -> 검색된 문자열(대상 문자열) 뒤에 모든 문자열이 나오게 됨
+    // uri에서 "cgi-bin"이라는 문자열이 없으면, static content
+    if(!strstr(uri, "cgi-bin")){ // Static content
+        strcpy(cgiargs, ""); //cgiargs 인자 string을 지운다.
+        strcpy(filename, "."); // 상대 리눅스 경로이름으로 변환 ex) '.'
+        strcat(filename, uri); // 상대 리눅스 경로이름으로 변환 ex) '.' + '/index.html'
+        if (uri[strlen(uri)-1] == '/') // URI가 '/'문자로 끝난다면
+            strcat(filename, "home.html"); // 기본 파일 이름인 home.html을 추가한다. -> 11.10과제 adder.html로 변경
+        return 1;
     }
-    else // ?없으면 빈칸으로 둘게
-      strcpy(cgiargs, "");
-    // 나머지 URI 부분을 상대 리눅스 파일이름으로 변환
-    strcpy(filename, ".");
-    strcat(filename, uri);
-    return 0;
-    // cgiargs: 123&123
-    // filename: ./cgi-bin/adder
+    else{ // Dynamic content (cgi-bin이라는 문자열 존재)
+        // 모든 CGI 인자들을 추출한다.
+        // index: 첫 번째 인자에서 두번째 인자를 찾는다. 찾으면 문자의 위치 포인터를, 못찾으면 NULL을 반환
+        ptr = index(uri, '?');
+        if(ptr){
+            strcpy(cgiargs, ptr+1);
+            *ptr = '\0';
+        }
+        else // ?없으면 빈칸으로 둘게
+            strcpy(cgiargs, "");
+        // 나머지 URI 부분을 상대 리눅스 파일이름으로 변환
+        strcpy(filename, ".");
+        strcat(filename, uri);
+        return 0;
+        // cgiargs: 123&123
+        // filename: ./cgi-bin/adder
   }
 }
 
-void serve_static(int fd, char *filename, int filesize, char *method)
-{
+void serve_static(int fd, char *filename, int filesize, char *method){
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
   get_filetype(filename, filetype);
@@ -197,24 +176,22 @@ void serve_static(int fd, char *filename, int filesize, char *method)
 
 /* get_filetype - Derive file type from filename */
 
-void get_filetype(char *filename, char *filetype)
-{
-  if (strstr(filename, ".html"))
+void get_filetype(char *filename, char *filetype){
+  if(strstr(filename, ".html"))
     strcpy(filetype, "text/html");
   else if (strstr(filename, ".gif"))
     strcpy(filetype, "image/gif");
-  else if (strstr(filename, ".png"))
+  else if(strstr(filename, ".png"))
     strcpy(filetype, "image/png");
-  else if (strstr(filename, ".jpg"))
+  else if(strstr(filename, ".jpg"))
     strcpy(filetype, "image/jpeg");
-  else if (strstr(filename, ".mp4"))
+  else if(strstr(filename, ".mp4"))
     strcpy(filetype, "video/mp4");
   else
-    strcpy(filetype, "text/plain");
+    strcpy(filetype, "text/plain");  
 }
 
-void serve_dynamic(int fd, char *filename, char *cgiargs, char *method)
-{
+void serve_dynamic(int fd, char *filename, char *cgiargs, char* method){
   char buf[MAXLINE], *emptylist[] = {NULL};
 
   /* Return first part of HTTP response */
@@ -223,8 +200,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs, char *method)
   sprintf(buf, "Server: Tiny Web Server\r\n");
   Rio_writen(fd, buf, strlen(buf));
 
-  if (Fork() == 0)
-  {
+  if(Fork()==0){
     setenv("QUERY_STRING", cgiargs, 1);
     setenv("REQUEST_METHOD", method, 1);
     Dup2(fd, STDOUT_FILENO);
