@@ -54,7 +54,7 @@ void doit(int fd){
   Rio_readlineb(&rio, buf, MAXLINE); // buf에 rio 다음 텍스트 줄을 복사
   printf("Request headers:\n");
   sscanf(buf, "%s %s %s", method, uri, version); // buf의 내용을 각 char 배열에 매핑
-
+  printf("---------%s-------\n", buf);
   if(!(strcasecmp(method, "GET") == 0 || strcasecmp(method,"HEAD") == 0)) { // GET요청 아니면 에러 발생
     clienterror(fd, method, "501", "Not implemented", "Tiny couldn't find this file");
     return;
@@ -96,7 +96,7 @@ void clienterror(int fd, char *cause, char *errnum, char *shortmsg, char *longms
   sprintf(body, "%s<hr><em>The Tiny Web server</em>\r\n", body);
 
   // client에게 전송
-  sprintf(buf, "HTTP/1.1 %s %s\r\n", errnum, longmsg);
+  sprintf(buf, "HTTP/1.0 %s %s\r\n", errnum, longmsg);
   Rio_writen(fd, buf, strlen(buf));
   sprintf(buf, "Content-type: text/html\r\n");
   Rio_writen(fd, buf, strlen(buf));
@@ -150,12 +150,14 @@ int parse_uri(char *uri, char *filename, char *cgiargs){
 void serve_static(int fd, char *filename, int filesize, char *method){
   int srcfd;
   char *srcp, filetype[MAXLINE], buf[MAXBUF];
+  rio_t rio;
   get_filetype(filename, filetype);
-  sprintf(buf, "HTTP/1.1 200 OK\r\n");
+  sprintf(buf, "HTTP/1.0 200 OK\r\n");
   sprintf(buf, "%sServer: Tiny Web Server\r\n", buf);
   sprintf(buf, "%sConnection: close\r\n", buf);
   sprintf(buf, "%sContent-length: %d\r\n", buf, filesize);
-  sprintf(buf, "%sContent-type: %s\r\n\r\n", buf, filetype);
+  sprintf(buf, "%sContent-type: %s\r\n\r\n",buf, filetype);
+
   Rio_writen(fd, buf, strlen(buf));
   printf("Response headers:\n");
   printf("%s", buf);
@@ -167,11 +169,12 @@ void serve_static(int fd, char *filename, int filesize, char *method){
   srcfd = Open(filename, O_RDONLY, 0); // filename에 해당하는 여는 파일 디스크립터를 반환
   // srcp = Mmap(0, filesize, PROT_READ, MAP_PRIVATE, srcfd, 0); // 파일 디스크립터는 프로세스 별로 디스크립터 테이블에 저장되므로 공유하려면 메모리에 매핑해줘야함
 
-  srcp = (char *)Malloc(filesize);
+  srcp = (char *)malloc(filesize);
+  Rio_readinitb(&rio, srcfd); 
   Rio_readn(srcfd, srcp, filesize);
   Close(srcfd);
   Rio_writen(fd, srcp, filesize);
-  Free(srcp);
+  free(srcp);
 }
 
 /* get_filetype - Derive file type from filename */
@@ -195,7 +198,7 @@ void serve_dynamic(int fd, char *filename, char *cgiargs, char* method){
   char buf[MAXLINE], *emptylist[] = {NULL};
 
   /* Return first part of HTTP response */
-  sprintf(buf, "HTTP/1.1 200 OK\r\n");
+  sprintf(buf, "HTTP/1.0 200 OK\r\n");
   Rio_writen(fd, buf, strlen(buf));
   sprintf(buf, "Server: Tiny Web Server\r\n");
   Rio_writen(fd, buf, strlen(buf));
