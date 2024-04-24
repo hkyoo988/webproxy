@@ -14,9 +14,11 @@ Cache_t *find_cache(char *key){
             }
             else if(node == tail){
                 tail = node->prev;
-                node->prev->next = NULL;
+                if(node->prev != NULL)
+                    node->prev->next = NULL;
             }else{
-                node->prev->next = node->next;
+                if(node->prev != NULL)
+                    node->prev->next = node->next;
                 node->next->prev = node->prev;
             }
             node->next = head;

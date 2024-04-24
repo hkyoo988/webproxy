@@ -8,7 +8,7 @@
 #define MAX_OBJECT_SIZE 102400
 #define PUT(n) (CURR_CACHE_SIZE + n)
 
-static char *server_port = "80";
+static char *server_port = "8080";
 static char *server_addr = "/";
 static char *host = "localhost";
 int total = 0;
@@ -42,9 +42,9 @@ int main(int argc, char **argv)
     connfd = Malloc(sizeof(int));
     *connfd = Accept(listenfd, (SA *)&clientaddr,
                     &clientlen); // line:netp:tiny:accept
-    Pthread_create(&tid, NULL, thread, connfd);
     Getnameinfo((SA *)&clientaddr, clientlen, hostname, MAXLINE, port, MAXLINE,
                 0);
+    Pthread_create(&tid, NULL, thread, connfd);
     printf("Accepted connection from (%s, %s)\n", hostname, port);
   }
 }
@@ -60,7 +60,9 @@ void doit(int fd)
 
   /* Read request line and header */
   Rio_readinitb(&rio, fd);           // fd를  rio_t 타입의 rio 버퍼와 연결
-  Rio_readlineb(&rio, buf, MAXLINE); // buf에 rio 다음 텍스트 줄을 복사
+  if(!(Rio_readlineb(&rio, buf, MAXLINE))) {
+    return;
+  } // buf에 rio 다음 텍스트 줄을 복사
   printf("Request headers:\n");
   sscanf(buf, "%s %s %s", method, uri, version); // buf의 내용을 각 char 배열에 매핑
   printf("%s", buf);
@@ -74,9 +76,11 @@ void doit(int fd)
   }
 
   if((node = find_cache(path)) != NULL){
-    printf("-----HIT CACHE!!%s-----\n", node->data);
-    Rio_writen(fd, node->data, node->size);
-    return;
+    printf("-----HIT CACHE!!-----\n");
+    if(node != NULL){
+      Rio_writen(fd, node->data, node->size);
+      return;
+    }
   }
 
   char buf2[MAXLINE];
@@ -108,7 +112,9 @@ void doit(int fd)
 
   char response[MAX_OBJECT_SIZE];
   ssize_t size = Rio_readnb(&rio_server,response,MAX_OBJECT_SIZE);
+
   Rio_writen(fd, response, size);
+  printf("--------size%dsize---------", size);
   if(size > MAX_OBJECT_SIZE){
     printf("-----SIZE OVER----------\n");
   }else if(total + size > MAX_CACHE_SIZE){

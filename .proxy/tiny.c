@@ -51,7 +51,9 @@ void doit(int fd){
 
   /* Read request line and header */
   Rio_readinitb(&rio, fd); // fd를  rio_t 타입의 rio 버퍼와 연결
-  Rio_readlineb(&rio, buf, MAXLINE); // buf에 rio 다음 텍스트 줄을 복사
+  if(!(Rio_readlineb(&rio, buf, MAXLINE))) {
+    return;
+  } // buf에 rio 다음 텍스트 줄을 복사
   printf("Request headers:\n");
   sscanf(buf, "%s %s %s", method, uri, version); // buf의 내용을 각 char 배열에 매핑
   printf("---------%s-------\n", buf);
